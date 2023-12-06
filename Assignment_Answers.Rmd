@@ -1,0 +1,288 @@
+---
+title: "Homework Task"
+output:
+  html_document: 
+    output: rmdformats::html_clean
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+    highlight: tango
+  pdf_document: 
+    latex_engine: xelatex
+    toc: true
+    highlight: tango
+    number_sections: true
+date: "2023-10-09"
+---
+
+```{r_setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## QUESTION 01: Data Visualisation for Science Communication
+
+### a) Provide your figure here:
+
+```{r installing_packages, echo=FALSE, message=FALSE, warning=FALSE}
+# Installing the packages relevant to this analysis, making sure these packages are accessible on the html version via cran 
+install.packages(c("ggplot2", "palmerpenguins", "janitor", "dplyr", "viridis","svglite","rmdformats", "tinytex", "readr"), repos = "https://cran.ma.imperial.ac.uk/")
+
+# Load the packages:
+library(ggplot2)
+library(palmerpenguins)
+library(janitor)
+library(dplyr)
+library(viridis)
+library(svglite)
+library(rmdformats)
+library(tinytex)
+library(readr)
+```
+
+```{r cleaning_data_1, echo=FALSE, message=FALSE, warning=FALSE}
+
+source("Functions/Cleaning.R")
+
+# Cleaning the raw data 
+penguins_clean_question_1 <- penguins_raw %>%
+    clean_column_names() %>%
+    shorten_species() %>%
+    remove_empty_columns_rows_culmen_depth() %>%
+    remove_empty_columns_rows_mass() %>%
+    remove_non_essential_columns_culmen_mass()
+```
+
+```{r saving_clean_data_1, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Saving cleaned data as csv in Data folder 
+write_csv(penguins_raw, "Data/penguins_raw.csv")
+write_csv(penguins_clean_question_1, "Data/penguins_clean_question_1.csv")
+
+```
+
+```{r bad_figure_code, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6.8}
+
+source("Functions/Plotting.R")
+
+# Plotting Body Mass and Culmen Depth across all penguin species in the dataset 
+penguins_bad_plot <- create_penguins_bad_plot(penguins_clean_question_1)
+print(penguins_bad_plot)
+
+```
+```{r bad_figure_code_saving, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
+
+source("Functions/Saving_Figures.R")
+
+# Saving this plot as svg and png 
+save_penguins_bad_plot_svg()
+save_penguins_bad_plot_png()
+
+```
+### b) Write about how your design choices mislead the reader about the underlying data (200-300 words).
+
+'Simpson's Paradox' refers to the phenomenon by which the association between variables in subgroups of a population are not accurately reflected in the population collectively due to the confounding effect of this underlying heterogeneity (Rücker and Schumacher, 2008). This causes negative relationships between variables to appear positive and vise versa. In my plot, I have presented the data for the assocation between body mass and culmen depth across all species, using a single line of best fit through this data to present a negative relationship. However, separating by species, as I have done below, illustrates this is not the relationship between properly the stratified data.
+
+Several elements of the visual design also make this poorly representative of the data. Our categorical perception of colour can have a biasing effect on how data is interpreted (Franconeri et al. 2021). I have used this phenomenon to distort the effect of my plot in two ways: firstly, the gradient of colour of the points along the y-axis enhances the downward trajectory of the data, emphasising the negative linear gradient that I have misleadingly conveyed. Secondly, this smooth gradient of colour presents the datapoints as one cohesive dataset, drawing attention away from the clumping of data by species that might reveal how more stratification could highlight a different relationship between the variables. 
+
+Another visual effect that obfuscates the uneven distribution of the data is my choice to use very small points with low opacity. This makes it difficult to make individual points of data, and even harder to interpret them collectively. This difficult is additionally enhanced for colour blind or otherwise colour-vision impaired observed, who make up approximately 4% of the global population (Olsen and Brewer, 1997).
+
+The final visual element that slightly distorts my graph is the manipulation of the axes. Stretching the y-axis so that it is slightly longer than the x-axis increases the slope of the linear line of best fit, emphasising the negative relationship further (Franconeri et al. 2021). 
+
+
+```{r better_figure_code, echo=FALSE, message=FALSE, warning=FALSE}
+source("Functions/Plotting.R")
+
+# Plotting Body Mass and Culmen Depth with penguins separated by species 
+penguins_better_plot <- create_penguins_better_plot(penguins_clean_question_1)
+print(penguins_better_plot)
+```
+
+```{r better_figure_code_saving, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
+
+source("Functions/Saving_Figures.R")
+
+# Saving this plot as svg and png 
+save_penguins_better_plot_svg()
+save_penguins_better_plot_png()
+
+```
+
+References:
+
+*Franconeri, S. L. et al. (2021)* The Science of Visual Data Communication: What Works. [Online]
+
+*Olson, J. M. & Brewer, C. A. (1997)* An Evaluation of Color Selections to Accommodate Map Users with Color-Vision Impairments. Annals of the Association of American Geographers. [Online] 87 (1), 103–134.
+
+*Rücker, G. & Schumacher, M. (2008)* Simpson’s paradox visualized: the example of the rosiglitazone meta-analysis. BMC medical research methodology. [Online] 8 (1), 34–34.
+
+
+------------------------------------------------------------------------
+
+## QUESTION 2: Data Pipeline
+
+------------------------------------------------------------------------
+
+### Introduction
+
+Upon initial examination in Question 1, I noted a positive correlation between culmen depth and body mass across various penguin species. This observation prompts a closer investigation into whether this correlation holds true specifically for Adelie penguins. 
+
+The assumption of a linear relationship between culmen depth and body mass suggests a proportional growth of this feature with body mass. However, such a correlation might not be as straightforward if the feature serves a purpose beyond mere size indication. In ecological contexts, certain species may exhibit unique organ development patterns that are not strictly proportional to body size due to community roles or other factors.
+
+In this analysis, I aim to test the hypothesis that culmen depth is linearly proportional to body mass in Adelie penguins. A positive linear trend may suggest a direct relationship between the two variables, while deviations from linearity could imply additional ecological complexities.
+
+### Cleaning the data 
+
+I cleaned the raw data to remove columns that were not relevant to my research (such as clutch completion, flipper length etc.), eliminated rows with N/A values in the variables of interest, cleaned the column names, and shortened the species names. Additionally, I subsetted the data to only include the Adelie penguin species as this was my focal species for this analysis. 
+
+```{r cleaning_data_2, echo=FALSE}
+
+source("Functions/Cleaning.R")
+
+# Cleaning the raw data 
+penguins_clean_question_2 <- penguins_raw %>%
+    clean_column_names() %>%
+    shorten_species() %>%
+    remove_empty_columns_rows_culmen_depth() %>%
+    remove_empty_columns_rows_mass() %>%
+    remove_empty_columns_rows_sex() %>%
+    remove_non_essential_columns_question_2() %>%
+    subset_adelie_penguins()
+
+```
+
+```{r saving_clean_data_2, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Saving cleaned data as csv in Data folder 
+write_csv(penguins_clean_question_2, "Data/penguins_clean_question_2.csv")
+
+```
+
+I then created an exploratory scatter plot to present the association between culmen depth and body mass in the Adelie penguins. This appears to show a positive relationship between these variables. 
+
+```{r Data Exploration}
+
+source("Functions/Plotting.R")
+
+# Plotting Body Mass and Culmen Depth with penguins in Adelie penguins alone 
+adelie_culmen_depth_body_mass_plot <- create_adelie_culmen_depth_body_mass_scatter_plot(penguins_clean_question_2)
+print(adelie_culmen_depth_body_mass_plot)
+
+```
+
+```{r adelie_culmen_depth_body_mass_plot_saving, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
+
+source("Functions/Saving_Figures.R")
+
+# Saving this plot as svg and png 
+save_adelie_culmen_depth_body_mass_plot_svg()
+save_adelie_culmen_depth_body_mass_plot_png()
+
+```
+
+### Hypothesis
+
+HA: there is a statistically significant linear relationship between the independent variable (culmen depth) and the dependent variable (body mass).
+
+H0: there is not a statistically significant linear relationship between the independent variable (culmen depth) and the dependent variable (body mass). 
+
+### Statistical Methods
+
+I have used a simple linear regression to test for the association between these variables. This allows me to quantify the strength and direction of the relationship and test for the statistical significance of this association. 
+
+```{r Statistics}
+
+source("Functions/Statistical_Testing.R")
+
+# Creating a linear model to test culmen depth against body mass in Adelie penguins 
+linear_model_culmen_depth_body_mass <- 
+create_linear_model_culmen_depth_body_mass(penguins_clean_question_2)
+
+# Summary of this model output 
+summary(linear_model_culmen_depth_body_mass)
+```
+
+I then used a Shapiro-Wilk test to establish whether my variables were normally distributed, fulfilling the requirements of the regression, or whether transformation of the data was required. I also plotted my residuals using a Q-Q plot to visually assess their normality. 
+
+```{r Normality Testing}
+
+# Conducting a Shapiro-Wilk test on the linear model 
+shapiro_test <- shapiro.test(residuals(linear_model_culmen_depth_body_mass))
+shapiro_test
+
+# Generating a Q-Q plot of residuals
+qqnorm(residuals(linear_model_culmen_depth_body_mass))
+qqline(residuals(linear_model_culmen_depth_body_mass))
+
+```
+
+
+### Results & Discussion
+
+Based on visual inspection of the Q-Q plot, the residuals in my linear regression seemed approximately normal. Furthermore, the p-value of the Shapiro-Wilk test is 0.1203, which is greater than 0.05, therefore there is no statistically significant evidence to suggest that the residuals are not  normally distributed. 
+
+My linear regression analysis provides strong support for the hypothesis of a significant positive relationship between body mass and culmen depth in the Adelie species of penguin. The coefficient of 218.21 indicates that, on average, for every additional millimeter of culmen depth, the body mass of the penguins increases by 218.21 grams.
+
+The extremely low p-value of 1.665e-14 provides good evidence to reject the null hypothesis, indicating that culmen depth is indeed a statistically significant predictor of body mass in this species using a linear model.
+
+Furthermore, the Multiple R-squared value of 0.3366 suggests that approximately 33.66% of the variability in body mass can be explained by culmen depth. While not capturing the entire variance, this model represents a reasonable fit to the data, providing useful insights into the relationship between these two variables.
+
+Overall, these findings suggest that culmen depth is grows in proportion with the overall body mass of Adelie penguins, suggesting that the growth of this feature does not have particular ecological significance. The plot below provides a visualisation of the positive linear relationship that I found between the variables in my data. It is also important to acknowledge, however, that there are limitations to this research that may limit the generalisability of my conclusions. I focussed solely on the Adelie penguin species, and thus this relationship may not extend to other penguin species or bird populations. Furthermore, this model assumes a linear relationship between culmen depth and body mass, whilst other ecological factors may introduce non-linear complexities. More complex modelling strategies could be considered in the future in order to broaden our understanding of the relationship between these variables. 
+
+```{r Plotting Results, message=FALSE, warning=FALSE}
+
+source("Functions/Plotting.R")
+
+# Plotting Body Mass and Culmen Depth with penguins in Adelie penguins with a line to represent the regression line 
+adelie_culmen_depth_body_mass_plot_regression <- create_adelie_culmen_depth_body_mass_scatter_plot_regression(penguins_clean_question_2)
+print(adelie_culmen_depth_body_mass_plot_regression)
+
+```
+
+```{r adelie_culmen_depth_body_mass_plot_regression_saving, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
+
+source("Functions/Saving_Figures.R")
+
+# Saving this plot as svg and png 
+save_adelie_culmen_depth_body_mass_plot_regression_svg()
+save_adelie_culmen_depth_body_mass_plot_regression_png()
+
+```
+
+### Conclusion
+
+In summary, this study investigated the relationship between culmen depth and body mass in Adelie penguins. Cleaning and pre-processing the data revealed a positive correlation, and a subsequent linear regression analysis provided robust evidence for a significant positive linear relationship. The coefficient of 218.21 suggested that, on average, a one millimeter increase in culmen depth corresponded to a 218.21 gram increase in body mass. Normality checks supported the reliability of the results. These findings contribute valuable insights into the proportional growth of culmen depth with body mass in Adelie penguins, shedding light on their anatomical development.
+
+------------------------------------------------------------------------
+
+## QUESTION 3: Open Science
+
+### a) GitHub
+
+*Upload your RProject you created for **Question 2** and any files and subfolders used to GitHub. Do not include any identifiers such as your name. Make sure your GitHub repo is public.*
+
+*GitHub link:* https://github.com/AnonymousBiology/Penguins-Reproducible-Data-Homework
+
+*You will be marked on your repo organisation and readability.*
+
+### b) Share your repo with a partner, download, and try to run their data pipeline.
+
+*Partner's GitHub link:*
+
+*You * *must* * provide this so I can verify there is no plagiarism between you and your partner.*
+
+### c) Reflect on your experience running their code. (300-500 words)
+
+-   *What elements of your partner's code helped you to understand their data pipeline?*
+
+-   *Did it run? Did you need to fix anything?*
+
+-   *What suggestions would you make for improving their code to make it more understandable or reproducible, and why?*
+
+-   *If you needed to alter your partner's figure using their code, do you think that would be easy or difficult, and why?*
+
+### d) Reflect on your own code based on your experience with your partner's code and their review of yours. (300-500 words)
+
+-   *What improvements did they suggest, and do you agree?*
+
+-   *What did you learn about writing code for other people?*
